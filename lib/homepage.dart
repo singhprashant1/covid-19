@@ -1,13 +1,15 @@
 import 'dart:convert';
+import 'package:corona/constance.dart';
 import 'package:corona/theme.dart';
+// import 'package:country_code_picker/country_code_picker.dart';
+import 'package:flutter_country_picker/flutter_country_picker.dart';
 import 'package:intl/intl.dart';
-
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:lite_rolling_switch/lite_rolling_switch.dart';
 import 'package:provider/provider.dart';
-
 import 'sizedbox.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class HomePage extends StatefulWidget {
   @override
@@ -27,18 +29,25 @@ class _HomePageState extends State<HomePage> {
   var time;
   var updatedt;
   var datetime;
+  Country _selected;
+
+  String _name;
+  String countryname;
   Future getData() async {
     http.Response response =
         await http.get("https://api.covid19api.com/summary");
     var result = jsonDecode(response.body);
 
+    Constants.prefs = await SharedPreferences.getInstance();
+    countryname = Constants.prefs.getString("name");
+
     setState(() {
       var array = result['Countries'];
-
       // this.country = result["Countries"][2]["Country"];
       for (int i = 0; i < array.length; i++) {
         this.country = result["Countries"][i]["Country"];
-        if (country == "India") {
+        print(countryname);
+        if (country == countryname) {
           this.newcase = result["Countries"][i]["NewConfirmed"];
           this.totalconfirm = result["Countries"][i]["TotalConfirmed"];
           this.recover = result["Countries"][i]["NewRecovered"];
@@ -47,19 +56,19 @@ class _HomePageState extends State<HomePage> {
           this.totaldeath = result["Countries"][i]["TotalDeaths"];
           this.date = result["Countries"][i]["Date"]; //2020-12-07T20:39:15Z
           // date = date.substring(10);
-          split =date.split("T");
-          time = split[1].toString().substring(0,split[1].toString().length-1);
+          split = date.split("T");
+          time =
+              split[1].toString().substring(0, split[1].toString().length - 1);
 
           DateTime parseDt = DateTime.parse(split[0]);
           final newFormat = DateFormat("dd, MMM, yyy");
           updatedt = newFormat.format(parseDt);
-this.datetime = updatedt + " " + time;
+          this.datetime = updatedt + " " + time;
           // print(split[0] +" "+ time);
         }
       }
     });
   }
-
 
   @override
   void initState() {
@@ -73,28 +82,30 @@ this.datetime = updatedt + " " + time;
     SizeConfig().init(context);
     return Scaffold(
       appBar: AppBar(
-        title: Text("Covid-19 India"),
-        actions:[Padding(
-          padding: const EdgeInsets.only(top: 10,bottom: 10,right: 10,left: 10),
-          child: LiteRollingSwitch(
-            value: true,
-            textOn: 'dark',
-            textOff: 'light',
-            colorOn: Colors.black45,
-            colorOff: Colors.blue,
-            iconOn: Icons.nightlight_round,
-            iconOff: Icons.wb_sunny,
-            onChanged: (bool position){
-              print("the button is$position");
-              if(position==true){
-                _themeChanger.setTheme(ThemeData.light());
-              }else{
-                _themeChanger.setTheme(ThemeData.dark());
-              }
-
-            },
-          ),
-        )],
+        title: Text("Covid-19 $countryname"),
+        actions: [
+          Padding(
+            padding:
+                const EdgeInsets.only(top: 10, bottom: 10, right: 10, left: 10),
+            child: LiteRollingSwitch(
+              value: true,
+              textOn: 'dark',
+              textOff: 'light',
+              colorOn: Colors.black45,
+              colorOff: Colors.blue,
+              iconOn: Icons.nightlight_round,
+              iconOff: Icons.wb_sunny,
+              onChanged: (bool position) {
+                print("the button is$position");
+                if (position == true) {
+                  _themeChanger.setTheme(ThemeData.light());
+                } else {
+                  _themeChanger.setTheme(ThemeData.dark());
+                }
+              },
+            ),
+          )
+        ],
       ),
       body: Stack(
         fit: StackFit.expand,
@@ -107,9 +118,45 @@ this.datetime = updatedt + " " + time;
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      datetime != null ? "Last update: $datetime": "loading",),
+                      datetime != null ? "Last update: $datetime" : "loading",
+                    ),
+                    // CountryCodePicker(
+                    //   onChanged: print,
+                    //   // Initial selection and favorite can be one of code ('IT') OR dial_code('+39')
+                    //   initialSelection: 'IT',
+                    //   // favorite: ['+39', 'FR'],
+                    //   // countryFilter: ['IT', 'FR'],
+                    //   // showFlagDialog: false,
+                    //   // comparator: (a, b) => b.name.compareTo(a.name),
+                    //   //Get the country information relevant to the initial selection
+                    //   onInit: (code) => print(
+                    //       "on init ${code.name} ${code.dialCode} ${code.name}"),
+                    // ),
                     SizedBox(
-                      height: SizeConfig.blockSizeVertical * 3,
+                      height: SizeConfig.blockSizeVertical * 1,
+                    ),
+                    CountryPicker(
+                      dense: false,
+                      showFlag: true, //displays flag, true by default
+                      showDialingCode:
+                          false, //displays dialing code, false by default
+                      showName: true, //displays country name, true by default
+                      showCurrency: false, //eg. 'British pound'
+                      showCurrencyISO: false, //eg. 'GBP'
+
+                      onChanged: (Country country) {
+                        setState(() {
+                          _selected = country;
+                          _name = country.name;
+                          print(_name);
+                          Constants.prefs.setString("name", _name);
+                          getData();
+                        });
+                      },
+                      selectedCountry: _selected,
+                    ),
+                    SizedBox(
+                      height: SizeConfig.blockSizeVertical * 2,
                     ),
                     Row(
                       children: [
@@ -138,7 +185,9 @@ this.datetime = updatedt + " " + time;
                                 height: SizeConfig.blockSizeVertical * 3,
                               ),
                               Text(
-                                newcase != null ? newcase.toString() : "loading",
+                                newcase != null
+                                    ? newcase.toString()
+                                    : "loading",
                                 style: TextStyle(
                                     color: Colors.red,
                                     fontSize: 24,
@@ -215,7 +264,9 @@ this.datetime = updatedt + " " + time;
                                 height: SizeConfig.blockSizeVertical * 3,
                               ),
                               Text(
-                                recover != null ? recover.toString() : "loading",
+                                recover != null
+                                    ? recover.toString()
+                                    : "loading",
                                 style: TextStyle(
                                     color: Colors.green,
                                     fontSize: 24,
