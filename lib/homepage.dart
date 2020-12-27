@@ -1,8 +1,8 @@
 import 'dart:convert';
 import 'package:corona/constance.dart';
 import 'package:corona/theme.dart';
-// import 'package:country_code_picker/country_code_picker.dart';
-import 'package:flutter_country_picker/flutter_country_picker.dart';
+import 'package:country_picker/country_picker.dart';
+// import 'package:flutter_country_picker/flutter_country_picker.dart';
 import 'package:intl/intl.dart';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
@@ -29,10 +29,11 @@ class _HomePageState extends State<HomePage> {
   var time;
   var updatedt;
   var datetime;
-  Country _selected;
+  // Country _selected;
 
   String _name;
   String countryname;
+  String countryname1;
   Future getData() async {
     http.Response response =
         await http.get("https://api.covid19api.com/summary");
@@ -45,9 +46,10 @@ class _HomePageState extends State<HomePage> {
       var array = result['Countries'];
       // this.country = result["Countries"][2]["Country"];
       for (int i = 0; i < array.length; i++) {
-        this.country = result["Countries"][i]["Country"];
+        this.country = result["Countries"][i]["CountryCode"];
         print(countryname);
         if (country == countryname) {
+          this.countryname1 = result["Countries"][i]["Country"];
           this.newcase = result["Countries"][i]["NewConfirmed"];
           this.totalconfirm = result["Countries"][i]["TotalConfirmed"];
           this.recover = result["Countries"][i]["NewRecovered"];
@@ -82,7 +84,15 @@ class _HomePageState extends State<HomePage> {
     SizeConfig().init(context);
     return Scaffold(
       appBar: AppBar(
-        title: Text("Covid-19 $countryname"),
+        title: RichText(
+          text: TextSpan(
+            text: 'Covid-19',
+            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+            children: <TextSpan>[
+              TextSpan(text: ' $countryname1', style: TextStyle(fontSize: 15)),
+            ],
+          ),
+        ),
         actions: [
           Padding(
             padding:
@@ -135,26 +145,56 @@ class _HomePageState extends State<HomePage> {
                     SizedBox(
                       height: SizeConfig.blockSizeVertical * 1,
                     ),
-                    CountryPicker(
-                      dense: false,
-                      showFlag: true, //displays flag, true by default
-                      showDialingCode:
-                          false, //displays dialing code, false by default
-                      showName: true, //displays country name, true by default
-                      showCurrency: false, //eg. 'British pound'
-                      showCurrencyISO: false, //eg. 'GBP'
-
-                      onChanged: (Country country) {
-                        setState(() {
-                          _selected = country;
-                          _name = country.name;
-                          print(_name);
-                          Constants.prefs.setString("name", _name);
-                          getData();
-                        });
+                    GestureDetector(
+                      onTap: () {
+                        showCountryPicker(
+                          context: context,
+                          showPhoneCode:
+                              false, // optional. Shows phone code before the country name.
+                          onSelect: (Country country) {
+                            print('Select country: ${country.countryCode}');
+                            setState(() {
+                              _name = country.countryCode;
+                              Constants.prefs.setString("name", _name);
+                              getData();
+                            });
+                          },
+                        );
                       },
-                      selectedCountry: _selected,
+                      child: Center(
+                        child: Container(
+                          height: 30,
+                          width: 100,
+                          color: Colors.redAccent,
+                          child: Center(
+                            child: Text(
+                              "Select Country",
+                              style: TextStyle(color: Colors.white),
+                            ),
+                          ),
+                        ),
+                      ),
                     ),
+                    // CountryPicker(
+                    //   dense: false,
+                    //   showFlag: true, //displays flag, true by default
+                    //   showDialingCode:
+                    //       false, //displays dialing code, false by default
+                    //   showName: true, //displays country name, true by default
+                    //   showCurrency: false, //eg. 'British pound'
+                    //   showCurrencyISO: false, //eg. 'GBP'
+
+                    //   onChanged: (Country country) {
+                    //     setState(() {
+                    //       _selected = country;
+                    //       _name = country.name;
+                    //       print(_name);
+                    //       Constants.prefs.setString("name", _name);
+                    //       getData();
+                    //     });
+                    //   },
+                    //   selectedCountry: _selected,
+                    // ),
                     SizedBox(
                       height: SizeConfig.blockSizeVertical * 2,
                     ),
